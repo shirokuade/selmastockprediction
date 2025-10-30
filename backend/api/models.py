@@ -57,6 +57,7 @@ class PredictionResult(BaseModel):
     predictions: List[PredictionData]
     trend: str  # "up", "down", "stable"
     confidence: float
+    signal: str = "HOLD"  # "STRONG_BUY", "BUY", "HOLD", "SELL", "STRONG_SELL"
     generated_at: datetime
 
 
@@ -91,3 +92,54 @@ class ErrorResponse(BaseModel):
     detail: str
     message: str
     timestamp: datetime
+
+
+# Portfolio models
+class PortfolioStock(BaseModel):
+    """Portfolio stock holding"""
+    symbol: str
+    shares: int = Field(..., gt=0, description="Number of shares")
+    purchase_price: float = Field(..., gt=0, description="Purchase price per share")
+    purchase_date: Optional[str] = None
+
+    @validator('symbol')
+    def validate_symbol(cls, v):
+        """Validate stock symbol"""
+        if not v or not v.strip():
+            raise ValueError("Stock symbol cannot be empty")
+        return v.upper().strip()
+
+
+class PortfolioResponse(BaseModel):
+    """Portfolio response with current values"""
+    stocks: List[Dict]  # Contains stock details with current prices
+    total_investment: float
+    current_value: float
+    total_gain_loss: float
+    total_gain_loss_percent: float
+    last_updated: datetime
+
+
+class AddPortfolioStockRequest(BaseModel):
+    """Request to add stock to portfolio"""
+    symbol: str
+    shares: int = Field(..., gt=0)
+    purchase_price: float = Field(..., gt=0)
+    purchase_date: Optional[str] = None
+
+
+# Activity Log models
+class ActivityLog(BaseModel):
+    """Activity log entry"""
+    id: Optional[int] = None
+    timestamp: datetime
+    activity_type: str  # "prediction", "training", "daily_update", "weekly_retrain", "error"
+    symbol: Optional[str] = None
+    message: str
+    details: Optional[Dict] = None
+
+
+class ActivityLogResponse(BaseModel):
+    """Activity logs response"""
+    logs: List[ActivityLog]
+    total: int

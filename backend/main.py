@@ -9,7 +9,7 @@ from loguru import logger
 import sys
 
 from config import settings
-from api.routes import stock, prediction, settings as settings_routes
+from api.routes import stock, prediction, settings as settings_routes, portfolio, activity
 
 # Configure logging
 logger.remove()
@@ -39,6 +39,8 @@ async def lifespan(app: FastAPI):
     os.makedirs(settings.qlib_data_dir, exist_ok=True)
     os.makedirs(settings.model_dir, exist_ok=True)
     os.makedirs("logs", exist_ok=True)
+    os.makedirs("user_portfolio", exist_ok=True)
+    os.makedirs("activity_logs", exist_ok=True)
 
     logger.info("Directories created successfully")
 
@@ -90,6 +92,8 @@ async def health_check():
 app.include_router(stock.router, prefix="/api/stock", tags=["Stock"])
 app.include_router(prediction.router, prefix="/api/prediction", tags=["Prediction"])
 app.include_router(settings_routes.router, prefix="/api/settings", tags=["Settings"])
+app.include_router(portfolio.router, tags=["Portfolio"])
+app.include_router(activity.router, tags=["Activity"])
 
 
 # Global exception handler
