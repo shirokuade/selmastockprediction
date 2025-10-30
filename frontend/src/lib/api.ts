@@ -23,13 +23,13 @@ const api = axios.create({
 });
 
 // Error handler
-const handleApiError = (error: unknown): never => {
+const handleApiError = (error: unknown): Error => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ApiError>;
     const message = axiosError.response?.data?.detail || axiosError.message;
-    throw new Error(message);
+    return new Error(message);
   }
-  throw error;
+  return error instanceof Error ? error : new Error(String(error));
 };
 
 // Stock API
@@ -42,7 +42,7 @@ export const stockApi = {
       );
       return response.data.stocks;
     } catch (error) {
-      handleApiError(error);
+      throw handleApiError(error);
     }
   },
 
@@ -52,7 +52,7 @@ export const stockApi = {
       const response = await api.post<StockInfo>('/api/stock/info', { symbol });
       return response.data;
     } catch (error) {
-      handleApiError(error);
+      throw handleApiError(error);
     }
   },
 
@@ -62,7 +62,7 @@ export const stockApi = {
       const response = await api.post(`/api/stock/history?days=${days}`, { symbol });
       return response.data;
     } catch (error) {
-      handleApiError(error);
+      throw handleApiError(error);
     }
   },
 
@@ -88,7 +88,7 @@ export const predictionApi = {
       });
       return response.data;
     } catch (error) {
-      handleApiError(error);
+      throw handleApiError(error);
     }
   },
 
@@ -97,7 +97,7 @@ export const predictionApi = {
     try {
       await api.post(`/api/prediction/train?symbol=${symbol}`);
     } catch (error) {
-      handleApiError(error);
+      throw handleApiError(error);
     }
   },
 
@@ -107,7 +107,7 @@ export const predictionApi = {
       const response = await api.get(`/api/prediction/model-status/${symbol}`);
       return response.data;
     } catch (error) {
-      handleApiError(error);
+      throw handleApiError(error);
     }
   },
 };
@@ -119,7 +119,7 @@ export const settingsApi = {
     try {
       await api.post('/api/settings/save', settings);
     } catch (error) {
-      handleApiError(error);
+      throw handleApiError(error);
     }
   },
 
@@ -143,7 +143,7 @@ export const settingsApi = {
     try {
       await api.put('/api/settings/update', settings);
     } catch (error) {
-      handleApiError(error);
+      throw handleApiError(error);
     }
   },
 };
@@ -160,7 +160,7 @@ export const portfolioApi = {
     try {
       await api.post('/api/portfolio/add', stock);
     } catch (error) {
-      handleApiError(error);
+      throw handleApiError(error);
     }
   },
 
@@ -170,7 +170,7 @@ export const portfolioApi = {
       const response = await api.get<PortfolioResponse>('/api/portfolio');
       return response.data;
     } catch (error) {
-      handleApiError(error);
+      throw handleApiError(error);
     }
   },
 
@@ -179,7 +179,7 @@ export const portfolioApi = {
     try {
       await api.delete(`/api/portfolio/${symbol}`);
     } catch (error) {
-      handleApiError(error);
+      throw handleApiError(error);
     }
   },
 
@@ -191,7 +191,7 @@ export const portfolioApi = {
       );
       return response.data.symbols;
     } catch (error) {
-      handleApiError(error);
+      throw handleApiError(error);
     }
   },
 };
@@ -215,7 +215,7 @@ export const activityApi = {
       );
       return response.data;
     } catch (error) {
-      handleApiError(error);
+      throw handleApiError(error);
     }
   },
 
@@ -225,7 +225,7 @@ export const activityApi = {
       const response = await api.get('/api/activity/logs/types');
       return response.data.types;
     } catch (error) {
-      handleApiError(error);
+      throw handleApiError(error);
     }
   },
 
@@ -235,7 +235,7 @@ export const activityApi = {
       const response = await api.get('/api/activity/logs/summary');
       return response.data;
     } catch (error) {
-      handleApiError(error);
+      throw handleApiError(error);
     }
   },
 };
