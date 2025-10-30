@@ -112,10 +112,10 @@ class StockPredictor:
                 latest_features = self._update_features(latest_features, pred_return)
 
             # Determine trend
-            trend = self._determine_trend(current_price, predictions[-1]["price"])
+            trend = self._determine_trend(current_price, predictions[-1].price)
 
             # Calculate overall confidence
-            avg_confidence = np.mean([p["confidence"] for p in predictions])
+            avg_confidence = np.mean([p.confidence for p in predictions])
 
             return PredictionResult(
                 symbol=symbol,
