@@ -1,0 +1,86 @@
+"""
+Pydantic models for API request/response
+"""
+from pydantic import BaseModel, Field, validator
+from typing import Optional, List, Dict
+from datetime import datetime
+
+
+class StockSymbolRequest(BaseModel):
+    """Request model for stock symbol"""
+    symbol: str = Field(..., description="Stock symbol (e.g., BBCA, BMDR)")
+
+    @validator('symbol')
+    def validate_symbol(cls, v):
+        """Validate stock symbol format"""
+        if not v or not v.strip():
+            raise ValueError("Stock symbol cannot be empty")
+        return v.upper().strip()
+
+
+class PredictionRequest(BaseModel):
+    """Request model for prediction"""
+    symbol: str = Field(..., description="Stock symbol (e.g., BBCA, BMDR)")
+    days: int = Field(5, description="Number of days to predict", ge=1, le=30)
+
+    @validator('symbol')
+    def validate_symbol(cls, v):
+        """Validate stock symbol format"""
+        if not v or not v.strip():
+            raise ValueError("Stock symbol cannot be empty")
+        return v.upper().strip()
+
+
+class StockData(BaseModel):
+    """Stock data model"""
+    symbol: str
+    name: Optional[str] = None
+    current_price: Optional[float] = None
+    change: Optional[float] = None
+    change_percent: Optional[float] = None
+    volume: Optional[int] = None
+    market_cap: Optional[float] = None
+    last_updated: Optional[datetime] = None
+
+
+class PredictionResult(BaseModel):
+    """Prediction result model"""
+    symbol: str
+    current_price: float
+    predictions: List[Dict[str, float]]  # [{"date": "2024-01-01", "price": 10000, "confidence": 0.85}]
+    trend: str  # "up", "down", "stable"
+    confidence: float
+    generated_at: datetime
+
+
+class UserSettings(BaseModel):
+    """User settings model"""
+    default_stock: str = Field(..., description="Default stock symbol")
+    prediction_days: int = Field(5, description="Default prediction days", ge=1, le=30)
+    notification_enabled: bool = Field(False, description="Enable notifications")
+
+    @validator('default_stock')
+    def validate_stock(cls, v):
+        """Validate stock symbol"""
+        if not v or not v.strip():
+            raise ValueError("Default stock cannot be empty")
+        return v.upper().strip()
+
+
+class UserSettingsResponse(BaseModel):
+    """User settings response"""
+    settings: UserSettings
+    saved_at: datetime
+
+
+class AvailableStocksResponse(BaseModel):
+    """Available stocks response"""
+    stocks: List[Dict[str, str]]  # [{"symbol": "BBCA", "name": "Bank Central Asia"}]
+    total: int
+
+
+class ErrorResponse(BaseModel):
+    """Error response model"""
+    detail: str
+    message: str
+    timestamp: datetime
