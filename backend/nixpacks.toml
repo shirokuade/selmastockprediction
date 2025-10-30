@@ -1,5 +1,6 @@
 [phases.setup]
-nixPkgs = ["python312", "libgomp"]
+nixPkgs = ["python312"]
+aptPkgs = ["libgomp1"]
 
 [phases.install]
 cmds = [
