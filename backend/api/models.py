@@ -94,6 +94,12 @@ class ErrorResponse(BaseModel):
     timestamp: datetime
 
 
+class SuccessResponse(BaseModel):
+    """Success response model"""
+    success: bool
+    message: str
+
+
 # Portfolio models
 class PortfolioStock(BaseModel):
     """Portfolio stock holding"""
