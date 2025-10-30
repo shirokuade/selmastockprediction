@@ -36,12 +36,17 @@ class Settings(BaseSettings):
 
     # Model Configuration
     model_type: str = "lightgbm"
-    training_period: int = 1825  # 5 years
+    training_period: int = 1825  # 5 years for daily data
     prediction_horizon: int = 5  # days ahead
+
+    # Data interval settings
+    training_interval: str = "1d"  # "1d" for daily (5 years available)
+                                   # "1h" for hourly (max 730 days/2 years due to Yahoo limit)
+    prediction_interval: str = "1d"  # Interval for making predictions
 
     # Indonesian Stock Market
     idx_stocks: List[str] = [
-        "BBCA", "BMDR", "BBRI", "TLKM", "ASII", "UNVR", "HMSP",
+        "BBCA", "BMRI", "BBRI", "TLKM", "ASII", "UNVR", "HMSP",
         "ICBP", "KLBF", "INDF", "SMGR", "GGRM", "PGAS", "ITMG",
         "ADRO", "PTBA", "INCO", "ANTM", "TINS", "MEDC"
     ]
@@ -54,6 +59,22 @@ class Settings(BaseSettings):
     def cors_origins(self) -> List[str]:
         """Parse CORS origins from comma-separated string"""
         return [origin.strip() for origin in self.allowed_origins.split(",")]
+
+    @property
+    def effective_training_period(self) -> int:
+        """
+        Get effective training period based on interval
+        Yahoo Finance limits: hourly data max 730 days, daily unlimited
+        """
+        if self.training_interval in ["1h", "60m"]:
+            # Hourly data limited to 2 years max
+            return min(self.training_period, 730)
+        elif self.training_interval in ["1m", "2m", "5m", "15m", "30m"]:
+            # Minute data severely limited
+            return min(self.training_period, 7)
+        else:
+            # Daily or longer - use full period
+            return self.training_period
 
     def get_stock_symbol(self, symbol: str) -> str:
         """Convert Indonesian stock symbol to Yahoo Finance format"""

@@ -114,7 +114,7 @@ frontend/
 ### Dashboard (/)
 
 The main page where users can:
-- Select Indonesian stocks (BBCA, BMDR, TLKM, etc.)
+- Select Indonesian stocks (BBCA, BMRI, TLKM, etc.)
 - View current stock prices and information
 - Generate AI-powered price predictions
 - See prediction charts and trend analysis

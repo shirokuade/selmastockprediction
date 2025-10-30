@@ -8,7 +8,7 @@ from datetime import datetime
 
 class StockSymbolRequest(BaseModel):
     """Request model for stock symbol"""
-    symbol: str = Field(..., description="Stock symbol (e.g., BBCA, BMDR)")
+    symbol: str = Field(..., description="Stock symbol (e.g., BBCA, BMRI)")
 
     @validator('symbol')
     def validate_symbol(cls, v):
@@ -20,7 +20,7 @@ class StockSymbolRequest(BaseModel):
 
 class PredictionRequest(BaseModel):
     """Request model for prediction"""
-    symbol: str = Field(..., description="Stock symbol (e.g., BBCA, BMDR)")
+    symbol: str = Field(..., description="Stock symbol (e.g., BBCA, BMRI)")
     days: int = Field(5, description="Number of days to predict", ge=1, le=30)
 
     @validator('symbol')

@@ -28,7 +28,7 @@ class StockDataFetcher:
         Get current stock information
 
         Args:
-            symbol: Stock symbol (e.g., BBCA, BMDR)
+            symbol: Stock symbol (e.g., BBCA, BMRI)
 
         Returns:
             StockData object or None if not found

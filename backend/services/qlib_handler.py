@@ -48,15 +48,20 @@ class QlibHandler:
             if not end_date:
                 end_date = datetime.now().strftime("%Y-%m-%d")
             if not start_date:
-                start = datetime.now() - timedelta(days=settings.training_period)
+                # Use effective_training_period which auto-adjusts based on interval
+                start = datetime.now() - timedelta(days=settings.effective_training_period)
                 start_date = start.strftime("%Y-%m-%d")
 
-            logger.info(f"Preparing data for {symbol} from {start_date} to {end_date}")
+            logger.info(f"Preparing data for {symbol} from {start_date} to {end_date} with interval {settings.training_interval}")
 
-            # Fetch historical data
+            # Fetch historical data with specified interval
             days = (datetime.strptime(end_date, "%Y-%m-%d") -
                    datetime.strptime(start_date, "%Y-%m-%d")).days
-            history = await self.stock_fetcher.get_stock_history(symbol, days=days)
+            history = await self.stock_fetcher.get_stock_history(
+                symbol,
+                days=days,
+                interval=settings.training_interval
+            )
 
             if history is None or history.empty:
                 logger.error(f"No data available for {symbol}")

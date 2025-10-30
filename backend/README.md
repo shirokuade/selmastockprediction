@@ -9,7 +9,7 @@ AI-powered stock prediction system for Indonesian stocks (IDX) using machine lea
 - **Technical Indicators**: RSI, MACD, Bollinger Bands, Moving Averages, etc.
 - **User Settings**: Save and manage user preferences
 - **RESTful API**: FastAPI-based endpoints for easy integration
-- **Indonesian Market**: Support for IDX stocks (BBCA, BMDR, TLKM, etc.)
+- **Indonesian Market**: Support for IDX stocks (BBCA, BMRI, TLKM, etc.)
 
 ## Tech Stack
 
@@ -254,7 +254,7 @@ This will test all API endpoints and display results.
 The system supports 20+ major Indonesian stocks including:
 
 - **BBCA**: Bank Central Asia
-- **BMDR**: Bank Mandiri
+- **BMRI**: Bank Mandiri
 - **BBRI**: Bank BRI
 - **TLKM**: Telkom Indonesia
 - **ASII**: Astra International

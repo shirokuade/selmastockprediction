@@ -12,7 +12,7 @@ This project consists of:
 
 - 🤖 **AI Predictions**: Machine learning models trained on historical data
 - 📊 **Technical Analysis**: RSI, MACD, Bollinger Bands, and more
-- 🇮🇩 **Indonesian Stocks**: Support for IDX stocks (BBCA, BMDR, TLKM, etc.)
+- 🇮🇩 **Indonesian Stocks**: Support for IDX stocks (BBCA, BMRI, TLKM, etc.)
 - ⚙️ **User Settings**: Customizable preferences and default stocks
 - 📈 **Real-time Data**: Live stock prices from Yahoo Finance
 - 🎯 **Accurate Forecasts**: 5-day predictions with confidence scores
@@ -108,7 +108,7 @@ The system supports 20+ major Indonesian stocks including:
 | Symbol | Company |
 |--------|---------|
 | BBCA | Bank Central Asia |
-| BMDR | Bank Mandiri |
+| BMRI | Bank Mandiri |
 | BBRI | Bank BRI |
 | TLKM | Telkom Indonesia |
 | ASII | Astra International |
