@@ -1,6 +1,6 @@
 # Indonesian Stock Prediction Backend
 
-AI-powered stock prediction system using Microsoft Qlib for Indonesian stocks (IDX). This backend provides REST APIs for stock data fetching, model training, and price predictions.
+AI-powered stock prediction system for Indonesian stocks (IDX) using machine learning. This backend provides REST APIs for stock data fetching, model training, and price predictions. Built with quantitative analysis techniques inspired by Microsoft Qlib.
 
 ## Features
 
@@ -15,10 +15,11 @@ AI-powered stock prediction system using Microsoft Qlib for Indonesian stocks (I
 
 - **Python 3.9+**
 - **FastAPI**: Web framework
-- **Microsoft Qlib**: Quantitative investment platform
+- **scikit-learn**: Machine learning models (Gradient Boosting)
+- **LightGBM & XGBoost**: Advanced ML algorithms
 - **yfinance**: Stock data fetching
-- **scikit-learn**: Machine learning models
 - **Pandas/NumPy**: Data processing
+- **Quantitative Analysis**: Techniques inspired by Microsoft Qlib
 
 ## Project Structure
 

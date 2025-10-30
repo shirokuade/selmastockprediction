@@ -1,13 +1,7 @@
 """
-Qlib integration for Indonesian stock prediction
+Data handler for Indonesian stock prediction using quantitative analysis
+Inspired by Microsoft Qlib's approach but using scikit-learn for simplicity
 """
-import qlib
-from qlib.config import REG_CN
-from qlib.contrib.model.gbdt import LGBModel
-from qlib.contrib.data.handler import Alpha158
-from qlib.contrib.strategy import TopkDropoutStrategy
-from qlib.contrib.evaluate import backtest
-from qlib.utils import init_instance_by_config
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -21,40 +15,25 @@ from services.stock_data_fetcher import StockDataFetcher
 
 
 class QlibHandler:
-    """Handle Qlib operations for stock prediction"""
+    """
+    Handle quantitative analysis operations for stock prediction
+    Uses technical indicators and ML models inspired by Qlib methodology
+    """
 
     def __init__(self):
-        self.initialized = False
+        self.initialized = True
         self.stock_fetcher = StockDataFetcher()
         self.models = {}  # Cache for trained models
-        self._initialize_qlib()
+        logger.info("Quantitative analysis handler initialized")
 
-    def _initialize_qlib(self):
-        """Initialize Qlib with custom configuration"""
-        try:
-            # Initialize Qlib
-            provider_uri = settings.qlib_data_dir
-            qlib.init(
-                provider_uri=provider_uri,
-                region=REG_CN,  # We'll use CN region as template
-                auto_mount=False,
-                custom_ops=[],
-            )
-            self.initialized = True
-            logger.info("Qlib initialized successfully")
-
-        except Exception as e:
-            logger.error(f"Failed to initialize Qlib: {str(e)}")
-            self.initialized = False
-
-    async def prepare_data_for_qlib(
+    async def prepare_data_for_analysis(
         self,
         symbol: str,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None
     ) -> Optional[pd.DataFrame]:
         """
-        Fetch and prepare stock data in Qlib format
+        Fetch and prepare stock data for quantitative analysis
 
         Args:
             symbol: Stock symbol
@@ -62,7 +41,7 @@ class QlibHandler:
             end_date: End date (YYYY-MM-DD)
 
         Returns:
-            DataFrame in Qlib format or None
+            DataFrame with OHLCV data and technical indicators
         """
         try:
             # Calculate dates if not provided
@@ -83,12 +62,12 @@ class QlibHandler:
                 logger.error(f"No data available for {symbol}")
                 return None
 
-            # Prepare data in Qlib format
+            # Prepare data for analysis
             df = history.copy()
             df['Date'] = pd.to_datetime(df['Date'])
             df = df.set_index('Date')
 
-            # Rename columns to Qlib format (lowercase)
+            # Normalize column names (lowercase)
             column_mapping = {
                 'Open': 'open',
                 'High': 'high',
@@ -110,7 +89,7 @@ class QlibHandler:
             return df
 
         except Exception as e:
-            logger.error(f"Error preparing data for Qlib: {str(e)}")
+            logger.error(f"Error preparing data for analysis: {str(e)}")
             return None
 
     def _add_technical_indicators(self, df: pd.DataFrame) -> pd.DataFrame:

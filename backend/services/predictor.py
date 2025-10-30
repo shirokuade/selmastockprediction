@@ -63,7 +63,7 @@ class StockPredictor:
                 return None
 
             # Prepare recent data for prediction
-            recent_data = await self.qlib_handler.prepare_data_for_qlib(symbol)
+            recent_data = await self.qlib_handler.prepare_data_for_analysis(symbol)
             if recent_data is None or recent_data.empty:
                 logger.error(f"No data available for prediction")
                 return None
@@ -146,7 +146,7 @@ class StockPredictor:
             logger.info(f"Training model for {symbol}")
 
             # Prepare training data
-            data = await self.qlib_handler.prepare_data_for_qlib(symbol)
+            data = await self.qlib_handler.prepare_data_for_analysis(symbol)
             if data is None or data.empty:
                 logger.error(f"No data available for training {symbol}")
                 return False

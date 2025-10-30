@@ -4,17 +4,16 @@ uvicorn[standard]==0.24.0
 pydantic==2.5.0
 pydantic-settings==2.1.0
 
-# Qlib and ML Dependencies
-pyqlib==0.9.5
-torch==2.1.0
+# ML Dependencies (Qlib is optional - we use scikit-learn primarily)
+# Note: Qlib has complex dependencies and may require additional setup
+# For now, we use scikit-learn which works great for our use case
 lightgbm==4.1.0
 xgboost==2.0.2
-catboost==1.2.2
+scikit-learn==1.3.2
 
 # Data Processing
 pandas==2.1.3
 numpy==1.26.2
-scikit-learn==1.3.2
 
 # Stock Data Fetching
 yfinance==0.2.32
@@ -39,3 +38,6 @@ httpx==0.25.2
 
 # Logging and Monitoring
 loguru==0.7.2
+
+# Job scheduling
+joblib==1.3.2

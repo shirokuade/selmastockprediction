@@ -1,6 +1,6 @@
 # Selma Stock Prediction
 
-AI-powered stock prediction system for Indonesian stocks using Microsoft Qlib. This full-stack application provides real-time predictions, technical analysis, and user-friendly settings management.
+AI-powered stock prediction system for Indonesian stocks using machine learning. This full-stack application provides real-time predictions, technical analysis, and user-friendly settings management. Built with quantitative analysis techniques inspired by Microsoft Qlib.
 
 ## Overview
 
@@ -22,8 +22,8 @@ This project consists of:
 ### Backend
 - Python 3.9+
 - FastAPI
-- Microsoft Qlib
-- scikit-learn
+- scikit-learn (Gradient Boosting)
+- LightGBM & XGBoost
 - yfinance
 - Pandas/NumPy
 
@@ -296,9 +296,10 @@ MIT License - see [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- [Microsoft Qlib](https://github.com/microsoft/qlib) - Quantitative investment platform
+- [Microsoft Qlib](https://github.com/microsoft/qlib) - Inspiration for quantitative analysis approach
 - [Yahoo Finance](https://finance.yahoo.com/) - Stock data provider
 - [FastAPI](https://fastapi.tiangolo.com/) - Modern web framework
+- [scikit-learn](https://scikit-learn.org/) - Machine learning library
 - [Next.js](https://nextjs.org/) - React framework
 
 ## Contact
