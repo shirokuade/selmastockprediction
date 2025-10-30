@@ -43,11 +43,18 @@ class StockData(BaseModel):
     last_updated: Optional[datetime] = None
 
 
+class PredictionData(BaseModel):
+    """Individual prediction data point"""
+    date: str
+    price: float
+    confidence: float
+
+
 class PredictionResult(BaseModel):
     """Prediction result model"""
     symbol: str
     current_price: float
-    predictions: List[Dict[str, float]]  # [{"date": "2024-01-01", "price": 10000, "confidence": 0.85}]
+    predictions: List[PredictionData]
     trend: str  # "up", "down", "stable"
     confidence: float
     generated_at: datetime

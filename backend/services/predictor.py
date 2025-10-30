@@ -13,7 +13,7 @@ import joblib
 import os
 
 from config import settings
-from api.models import PredictionResult
+from api.models import PredictionResult, PredictionData
 from services.qlib_handler import QlibHandler
 from services.stock_data_fetcher import StockDataFetcher
 
@@ -98,11 +98,11 @@ class StockPredictor:
 
                 # Store prediction
                 pred_date = datetime.now() + timedelta(days=i+1)
-                predictions.append({
-                    "date": pred_date.strftime("%Y-%m-%d"),
-                    "price": round(float(pred_price), 2),
-                    "confidence": self._calculate_confidence(pred_return, i)
-                })
+                predictions.append(PredictionData(
+                    date=pred_date.strftime("%Y-%m-%d"),
+                    price=round(float(pred_price), 2),
+                    confidence=self._calculate_confidence(pred_return, i)
+                ))
 
                 # Update for next iteration
                 current_pred_price = pred_price
