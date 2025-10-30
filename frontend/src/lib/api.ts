@@ -7,6 +7,9 @@ import type {
   UserSettings,
   AvailableStock,
   ApiError,
+  PortfolioStock,
+  PortfolioResponse,
+  ActivityLogResponse,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -139,6 +142,98 @@ export const settingsApi = {
   updateSettings: async (settings: UserSettings): Promise<void> => {
     try {
       await api.put('/api/settings/update', settings);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+};
+
+// Portfolio API
+export const portfolioApi = {
+  // Add stock to portfolio
+  addStock: async (stock: {
+    symbol: string;
+    shares: number;
+    purchase_price: number;
+    purchase_date?: string;
+  }): Promise<void> => {
+    try {
+      await api.post('/api/portfolio/add', stock);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+
+  // Get portfolio
+  getPortfolio: async (): Promise<PortfolioResponse> => {
+    try {
+      const response = await api.get<PortfolioResponse>('/api/portfolio');
+      return response.data;
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+
+  // Remove stock from portfolio
+  removeStock: async (symbol: string): Promise<void> => {
+    try {
+      await api.delete(`/api/portfolio/${symbol}`);
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+
+  // Get portfolio stocks list
+  getStocksList: async (): Promise<string[]> => {
+    try {
+      const response = await api.get<{ symbols: string[]; count: number }>(
+        '/api/portfolio/stocks/list'
+      );
+      return response.data.symbols;
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+};
+
+// Activity API
+export const activityApi = {
+  // Get activity logs
+  getLogs: async (params?: {
+    limit?: number;
+    activity_type?: string;
+    symbol?: string;
+  }): Promise<ActivityLogResponse> => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.activity_type) queryParams.append('activity_type', params.activity_type);
+      if (params?.symbol) queryParams.append('symbol', params.symbol);
+
+      const response = await api.get<ActivityLogResponse>(
+        `/api/activity/logs?${queryParams.toString()}`
+      );
+      return response.data;
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+
+  // Get activity types
+  getTypes: async (): Promise<any[]> => {
+    try {
+      const response = await api.get('/api/activity/logs/types');
+      return response.data.types;
+    } catch (error) {
+      handleApiError(error);
+    }
+  },
+
+  // Get activity summary
+  getSummary: async (): Promise<any> => {
+    try {
+      const response = await api.get('/api/activity/logs/summary');
+      return response.data;
     } catch (error) {
       handleApiError(error);
     }
