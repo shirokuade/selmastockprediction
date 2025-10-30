@@ -3,7 +3,7 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { TrendingUp, Settings, Home } from 'lucide-react';
+import { TrendingUp, Settings, Home, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -15,6 +15,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home },
+    { name: 'Portfolio', href: '/portfolio', icon: Wallet },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 

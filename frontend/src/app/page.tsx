@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Minus, AlertCircle, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, AlertCircle, RefreshCw, Target, CheckCircle, XCircle } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Loading from '@/components/ui/Loading';
@@ -106,6 +106,71 @@ export default function HomePage() {
     }
   };
 
+  const getSignalConfig = (signal: string) => {
+    switch (signal) {
+      case 'STRONG_BUY':
+        return {
+          color: 'bg-green-600',
+          textColor: 'text-white',
+          borderColor: 'border-green-600',
+          icon: <TrendingUp className="h-12 w-12" />,
+          label: 'STRONG BUY',
+          description: 'Highly recommended to buy this stock',
+          bgGradient: 'from-green-500 to-green-700'
+        };
+      case 'BUY':
+        return {
+          color: 'bg-green-500',
+          textColor: 'text-white',
+          borderColor: 'border-green-500',
+          icon: <CheckCircle className="h-12 w-12" />,
+          label: 'BUY',
+          description: 'Good opportunity to buy',
+          bgGradient: 'from-green-400 to-green-600'
+        };
+      case 'HOLD':
+        return {
+          color: 'bg-blue-500',
+          textColor: 'text-white',
+          borderColor: 'border-blue-500',
+          icon: <Target className="h-12 w-12" />,
+          label: 'HOLD',
+          description: 'Maintain current position',
+          bgGradient: 'from-blue-400 to-blue-600'
+        };
+      case 'SELL':
+        return {
+          color: 'bg-orange-500',
+          textColor: 'text-white',
+          borderColor: 'border-orange-500',
+          icon: <AlertCircle className="h-12 w-12" />,
+          label: 'SELL',
+          description: 'Consider selling',
+          bgGradient: 'from-orange-400 to-orange-600'
+        };
+      case 'STRONG_SELL':
+        return {
+          color: 'bg-red-600',
+          textColor: 'text-white',
+          borderColor: 'border-red-600',
+          icon: <XCircle className="h-12 w-12" />,
+          label: 'STRONG SELL',
+          description: 'Strongly recommended to sell',
+          bgGradient: 'from-red-500 to-red-700'
+        };
+      default:
+        return {
+          color: 'bg-gray-500',
+          textColor: 'text-white',
+          borderColor: 'border-gray-500',
+          icon: <Minus className="h-12 w-12" />,
+          label: 'UNKNOWN',
+          description: 'No clear signal',
+          bgGradient: 'from-gray-400 to-gray-600'
+        };
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Section */}
@@ -167,6 +232,42 @@ export default function HomePage() {
             </button>
           </div>
         </Alert>
+      )}
+
+      {/* Trading Signal - Prominent Display */}
+      {prediction && prediction.signal && (
+        <div className={`bg-gradient-to-r ${getSignalConfig(prediction.signal).bgGradient} rounded-xl shadow-2xl overflow-hidden`}>
+          <div className="p-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className={`${getSignalConfig(prediction.signal).textColor}`}>
+                  {getSignalConfig(prediction.signal).icon}
+                </div>
+                <div>
+                  <h3 className="text-4xl font-bold text-white mb-2">
+                    {getSignalConfig(prediction.signal).label}
+                  </h3>
+                  <p className="text-white text-opacity-90 text-lg">
+                    {getSignalConfig(prediction.signal).description}
+                  </p>
+                  <p className="text-white text-opacity-75 text-sm mt-2">
+                    Confidence: {(prediction.confidence * 100).toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+              <div className="text-right text-white">
+                <p className="text-sm text-white text-opacity-75">Current Price</p>
+                <p className="text-3xl font-bold">{formatCurrency(prediction.current_price)}</p>
+                <p className="text-sm text-white text-opacity-75 mt-2">
+                  {predictionDays}-Day Forecast
+                </p>
+                <p className="text-2xl font-semibold">
+                  {formatCurrency(prediction.predictions[prediction.predictions.length - 1].price)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Current Stock Info */}
