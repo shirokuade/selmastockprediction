@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     environment: str = "development"
 
     # CORS Settings
-    allowed_origins: str = "http://localhost:3000"
+    allowed_origins: str = "http://localhost:3000,https://selmastock.netlify.app"
 
     # Data Configuration
     data_dir: str = "./data"

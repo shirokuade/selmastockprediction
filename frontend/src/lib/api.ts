@@ -12,7 +12,7 @@ import type {
   ActivityLogResponse,
 } from '@/types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/$/, '');
 
 const api = axios.create({
   baseURL: API_URL,
