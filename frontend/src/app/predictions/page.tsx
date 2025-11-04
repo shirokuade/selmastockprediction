@@ -131,9 +131,9 @@ export default function PredictionEnginePage() {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Prediction Engine</h1>
+            <h1 className="text-3xl font-bold text-gray-900">AI Prediction Engine</h1>
             <p className="text-gray-600 mt-2">
-              Weekly trading signals for top 100 Indonesian stocks
+              Weekly ML-powered trading signals for top 100 Indonesian stocks
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -259,10 +259,11 @@ export default function PredictionEnginePage() {
 
         {/* Info Banner */}
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h3 className="text-sm font-semibold text-blue-900 mb-1">Trading Strategy</h3>
+          <h3 className="text-sm font-semibold text-blue-900 mb-1">🤖 AI-Powered Trading Strategy</h3>
           <p className="text-sm text-blue-700">
+            Using trained ML models (XGBoost, LightGBM) with 5 years of data and advanced technical indicators.
             Buy on <strong>Monday</strong> at opening price. Sell on <strong>Friday</strong> at closing price.
-            All predictions are shown - look for high gain % for best opportunities.
+            All predictions shown - look for high gain % for best opportunities.
           </p>
         </div>
 
@@ -386,11 +387,12 @@ export default function PredictionEnginePage() {
           </div>
 
           <div className="p-6 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-            <h3 className="font-semibold text-blue-900 mb-2">📊 Top 2 Algorithms</h3>
+            <h3 className="font-semibold text-blue-900 mb-2">📊 Trained ML Models</h3>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• LightGBM (Best performer)</li>
-              <li>• XGBoost (2nd best performer)</li>
-              <li>• Average of both for final prediction</li>
+              <li>• LightGBM: Trained on 5 years historical data</li>
+              <li>• XGBoost: Trained on 5 years historical data</li>
+              <li>• Uses Qlib features: OHLCV, MA, RSI, MACD</li>
+              <li>• Same models as Dashboard predictions</li>
             </ul>
           </div>
 

@@ -3,7 +3,7 @@ Prediction Engine Service
 
 Handles:
 - Daily price updates for top 100 stocks
-- Monday prediction generation
+- Monday prediction generation using trained ML models
 - Daily actual price tracking
 - Comparison of predicted vs actual performance
 """
@@ -13,6 +13,10 @@ from typing import List, Dict, Optional
 from loguru import logger
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
+import numpy as np
+import pandas as pd
+import os
+import joblib
 
 from database.models import (
     StockPrice, WeeklyPrediction, Top100Stock,
@@ -20,11 +24,8 @@ from database.models import (
 )
 from data.top_100_stocks import get_top_100_stocks, get_stock_symbols
 from services.stock_data_fetcher import StockDataFetcher
+from services.qlib_handler import QlibHandler
 from services.activity_logger import activity_logger
-import xgboost as xgb
-import lightgbm as lgb
-import numpy as np
-import pandas as pd
 
 
 class PredictionEngine:
@@ -34,7 +35,9 @@ class PredictionEngine:
 
     def __init__(self):
         self.data_fetcher = StockDataFetcher()
+        self.qlib_handler = QlibHandler()
         self.best_algorithms = ["LightGBM", "XGBoost"]  # Top 2 performers
+        self.models_dir = "models"  # Directory where trained models are stored
 
     async def initialize_top_100_stocks(self):
         """Initialize top 100 stocks in database"""
@@ -525,72 +528,126 @@ class PredictionEngine:
 
     async def _predict_with_algorithm(self, symbol: str, algorithm: str, current_price: float, db: Session) -> Optional[float]:
         """
-        Predict Friday price using specified algorithm
+        Predict Friday price using trained ML model
 
-        For MVP: Uses simple technical analysis based on stored historical data
-        In production: Would use trained ML models
+        Uses actual trained LightGBM or XGBoost models with Qlib features
         """
         try:
-            # Get historical data from database (last 60 days minimum)
-            historical_prices = db.query(StockPrice).filter(
-                StockPrice.symbol == symbol
-            ).order_by(StockPrice.date.desc()).limit(100).all()
-
-            if len(historical_prices) < 20:
-                logger.warning(f"Not enough historical data for {symbol} ({len(historical_prices)} records)")
-                # Fall back to fetching from Yahoo Finance
-                data = await self.data_fetcher.get_stock_history(
-                    symbol,
-                    days=90,
-                    interval="1d"
-                )
-
-                if data is None or data.empty or len(data) < 20:
+            # Load the trained model for this algorithm
+            model = await self._load_model(symbol, algorithm)
+            if model is None:
+                logger.warning(f"No trained {algorithm} model for {symbol}, attempting to train...")
+                # Try to train the model
+                success = await self._train_model_if_needed(symbol)
+                if not success:
+                    logger.error(f"Could not train model for {symbol}")
+                    return None
+                model = await self._load_model(symbol, algorithm)
+                if model is None:
+                    logger.error(f"Model still None after training for {symbol}")
                     return None
 
-                # Calculate features from fetched data
-                df = data.copy()
-            else:
-                # Use stored historical data
-                df = pd.DataFrame([
-                    {
-                        'Date': p.date,
-                        'Close': p.price,
-                        'Volume': p.volume
-                    }
-                    for p in reversed(historical_prices)
-                ])
-                df.set_index('Date', inplace=True)
-
-            # Calculate features
-            df['Returns'] = df['Close'].pct_change()
-            df['MA5'] = df['Close'].rolling(window=5).mean()
-            df['MA20'] = df['Close'].rolling(window=20).mean()
-            df['Volatility'] = df['Returns'].rolling(window=20).std()
-
-            # Simple prediction: current price + (average 5-day return * 5)
-            avg_5day_return = df['Returns'].tail(5).mean()
-
-            # Check for NaN
-            if pd.isna(avg_5day_return):
-                logger.warning(f"Cannot calculate avg return for {symbol}")
+            # Prepare data using Qlib
+            recent_data = await self.qlib_handler.prepare_data_for_analysis(symbol)
+            if recent_data is None or recent_data.empty:
+                logger.warning(f"No Qlib data available for {symbol}")
                 return None
 
-            # Add some variation between algorithms
-            if algorithm == "LightGBM":
-                # LightGBM: Slightly more conservative
-                multiplier = 4.5
-            else:  # XGBoost
-                # XGBoost: Slightly more aggressive
-                multiplier = 5.2
+            # Get features
+            feature_cols = self.qlib_handler.get_feature_columns()
+            recent_data = recent_data.dropna(subset=feature_cols)
 
-            predicted_price = current_price * (1 + (avg_5day_return * multiplier))
+            if recent_data.empty:
+                logger.warning(f"No valid features for {symbol}")
+                return None
 
-            return float(predicted_price)
+            # Get the most recent features
+            latest_features = recent_data[feature_cols].iloc[-1:].values
+
+            # Load scaler
+            scaler = await self._load_scaler(symbol)
+            if scaler:
+                latest_features = scaler.transform(latest_features)
+
+            # Make iterative predictions for 5 days (Monday to Friday)
+            current_pred_price = current_price
+            for day in range(5):
+                # Predict return for next day
+                pred_return = model.predict(latest_features)[0]
+
+                # Calculate next day's price
+                current_pred_price = current_pred_price * (1 + pred_return)
+
+                # Update features for next iteration
+                latest_features = self._update_features(latest_features, pred_return)
+
+            # Return Friday's predicted price
+            return float(current_pred_price)
 
         except Exception as e:
             logger.error(f"Prediction error for {symbol} with {algorithm}: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             return None
+
+    async def _load_model(self, symbol: str, algorithm: str) -> Optional[any]:
+        """Load a trained model for the specified algorithm"""
+        try:
+            algorithm_lower = algorithm.lower().replace(" ", "_")
+            model_path = os.path.join(self.models_dir, f"{symbol}_{algorithm_lower}.pkl")
+
+            if not os.path.exists(model_path):
+                return None
+
+            model = joblib.load(model_path)
+            return model
+        except Exception as e:
+            logger.error(f"Error loading model for {symbol} {algorithm}: {str(e)}")
+            return None
+
+    async def _load_scaler(self, symbol: str) -> Optional[any]:
+        """Load the feature scaler for a symbol"""
+        try:
+            scaler_path = os.path.join(self.models_dir, f"{symbol}_scaler.pkl")
+
+            if not os.path.exists(scaler_path):
+                return None
+
+            scaler = joblib.load(scaler_path)
+            return scaler
+        except Exception as e:
+            logger.error(f"Error loading scaler for {symbol}: {str(e)}")
+            return None
+
+    async def _train_model_if_needed(self, symbol: str) -> bool:
+        """Train models if they don't exist"""
+        try:
+            # Import here to avoid circular dependency
+            from services.ensemble_predictor import EnsemblePredictor
+
+            predictor = EnsemblePredictor()
+            success = await predictor.train_ensemble(symbol)
+            return success
+        except Exception as e:
+            logger.error(f"Error training model for {symbol}: {str(e)}")
+            return False
+
+    def _update_features(self, features: np.ndarray, pred_return: float) -> np.ndarray:
+        """
+        Update features for next iteration in sequential prediction
+
+        This is a simplified version - shifts features and adds new prediction
+        """
+        # Create a copy
+        new_features = features.copy()
+
+        # Shift time-series features (simple approach)
+        # In practice, this would be more sophisticated
+        if new_features.shape[1] > 1:
+            new_features[0, :-1] = new_features[0, 1:]
+            new_features[0, -1] = pred_return
+
+        return new_features
 
     def get_active_predictions(self, db: Session, min_gain: float = 2.5) -> List[Dict]:
         """Get all active predictions sorted by predicted gain"""
