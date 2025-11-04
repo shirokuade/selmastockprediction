@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { RefreshCw, TrendingUp, CheckCircle, XCircle, AlertTriangle, Zap } from 'lucide-react';
+import { RefreshCw, TrendingUp, CheckCircle, XCircle, AlertTriangle, Zap, Database } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/$/, '');
@@ -13,6 +13,7 @@ export default function PredictionEnginePage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'active' | 'historical'>('active');
   const [predicting, setPredicting] = useState(false);
+  const [fetchingHistory, setFetchingHistory] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,6 +62,27 @@ export default function PredictionEnginePage() {
       setError(err.response?.data?.detail || err.message || 'Failed to generate predictions');
     } finally {
       setPredicting(false);
+    }
+  };
+
+  const fetchHistoricalData = async () => {
+    try {
+      setFetchingHistory(true);
+      setError(null);
+      setSuccess(null);
+
+      const response = await axios.post(`${API_URL}/api/prediction-engine/trigger/fetch-history?days=365`);
+
+      setSuccess(response.data.message + ' - ' + response.data.note);
+
+      // Reload data after a delay
+      setTimeout(() => {
+        loadData();
+      }, 2000);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || err.message || 'Failed to fetch historical data');
+    } finally {
+      setFetchingHistory(false);
     }
   };
 
@@ -117,15 +139,23 @@ export default function PredictionEnginePage() {
           <div className="flex items-center gap-3">
             <button
               onClick={loadData}
-              disabled={loading || predicting}
+              disabled={loading || predicting || fetchingHistory}
               className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2 disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </button>
             <button
+              onClick={fetchHistoricalData}
+              disabled={loading || predicting || fetchingHistory}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <Database className={`h-4 w-4 ${fetchingHistory ? 'animate-pulse' : ''}`} />
+              {fetchingHistory ? 'Fetching...' : 'Fetch History'}
+            </button>
+            <button
               onClick={triggerPredictions}
-              disabled={loading || predicting}
+              disabled={loading || predicting || fetchingHistory}
               className="px-6 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-colors flex items-center gap-2 font-semibold disabled:opacity-50 shadow-lg"
             >
               <Zap className={`h-5 w-5 ${predicting ? 'animate-pulse' : ''}`} />
@@ -145,6 +175,19 @@ export default function PredictionEnginePage() {
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
             {error}
+          </div>
+        )}
+
+        {/* Fetching History Status */}
+        {fetchingHistory && (
+          <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
+              <div>
+                <p className="text-purple-900 font-semibold">Fetching historical data...</p>
+                <p className="text-purple-700 text-sm">This will take 10-15 minutes for 1 year of data for 100 stocks. Please wait.</p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -236,7 +279,7 @@ export default function PredictionEnginePage() {
               <p className="text-lg font-medium">No predictions available</p>
               <p className="text-sm mt-2">
                 {activeTab === 'active'
-                  ? 'Wait for Monday 9 AM WIB for next predictions, or click "Predict!" button above to generate now.'
+                  ? 'First, click "Fetch History" to download historical data, then click "Predict!" to generate predictions.'
                   : 'No historical data yet. Predictions will appear here after first week completes.'}
               </p>
             </div>
@@ -327,11 +370,12 @@ export default function PredictionEnginePage() {
         {/* Strategy Info */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-6 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
-            <h3 className="font-semibold text-green-900 mb-2">🤖 Automated Process</h3>
+            <h3 className="font-semibold text-green-900 mb-2">🤖 Setup & Process</h3>
             <ul className="text-sm text-green-800 space-y-1">
-              <li>• Daily: Update prices (8 AM WIB)</li>
-              <li>• Monday: Generate predictions (9 AM WIB)</li>
-              <li>• Daily: Track actual prices (5 PM WIB)</li>
+              <li>• <strong>First time:</strong> Click "Fetch History" (10-15 min)</li>
+              <li>• <strong>Daily:</strong> Update prices (8 AM WIB)</li>
+              <li>• <strong>Monday:</strong> Generate predictions (9 AM WIB)</li>
+              <li>• <strong>Daily:</strong> Track actual prices (5 PM WIB)</li>
             </ul>
           </div>
 

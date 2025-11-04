@@ -76,6 +76,129 @@ class PredictionEngine:
         finally:
             db.close()
 
+    async def fetch_historical_data(self, days: int = 365):
+        """
+        Fetch and store historical price data for all top 100 stocks
+        This should be run BEFORE generating predictions
+
+        Args:
+            days: Number of days of historical data to fetch (default 365 = 1 year)
+        """
+        start_time = datetime.now()
+        logger.info("=" * 80)
+        logger.info(f"Starting historical data fetch at {start_time}")
+        logger.info(f"Fetching {days} days of historical data")
+        logger.info("=" * 80)
+
+        db = SessionLocal()
+        try:
+            # Get all active stocks
+            stocks = db.query(Top100Stock).filter(Top100Stock.is_active == True).all()
+
+            logger.info(f"Fetching historical data for {len(stocks)} stocks...")
+
+            successful = 0
+            failed = 0
+            total_records = 0
+
+            for stock in stocks:
+                try:
+                    # Fetch historical data
+                    symbol_with_jk = f"{stock.symbol}.JK"
+                    data = await self.data_fetcher.fetch_stock_data(
+                        symbol_with_jk,
+                        period=f"{days}d",
+                        interval="1d"
+                    )
+
+                    if data is not None and not data.empty:
+                        records_added = 0
+
+                        # Store each historical price point
+                        for index, row in data.iterrows():
+                            price_date = index.to_pydatetime()
+
+                            # Check if record already exists
+                            existing = db.query(StockPrice).filter(
+                                and_(
+                                    StockPrice.symbol == stock.symbol,
+                                    StockPrice.date >= datetime.combine(price_date.date(), datetime.min.time()),
+                                    StockPrice.date < datetime.combine(price_date.date() + timedelta(days=1), datetime.min.time())
+                                )
+                            ).first()
+
+                            if not existing:
+                                price_record = StockPrice(
+                                    symbol=stock.symbol,
+                                    name=stock.name,
+                                    date=price_date,
+                                    price=float(row['Close']),
+                                    volume=int(row['Volume']) if 'Volume' in row and pd.notna(row['Volume']) else 0
+                                )
+                                db.add(price_record)
+                                records_added += 1
+
+                        if records_added > 0:
+                            db.commit()
+                            total_records += records_added
+                            successful += 1
+                            logger.info(f"✓ {stock.symbol}: Added {records_added} historical records")
+                        else:
+                            successful += 1
+                            logger.info(f"○ {stock.symbol}: All historical data already exists")
+                    else:
+                        failed += 1
+                        logger.warning(f"✗ {stock.symbol}: No historical data available")
+
+                except Exception as e:
+                    failed += 1
+                    logger.error(f"✗ {stock.symbol}: {str(e)}")
+                    db.rollback()
+
+                # Rate limiting delay
+                await asyncio.sleep(1.0)
+
+            end_time = datetime.now()
+            duration = (end_time - start_time).total_seconds()
+
+            summary = f"Historical data fetch completed: {successful} successful, {failed} failed, {total_records} total records ({duration:.1f}s)"
+            logger.info("=" * 80)
+            logger.info(summary)
+            logger.info("=" * 80)
+
+            await activity_logger.log_activity(
+                activity_type="data_fetch",
+                message=summary,
+                details={
+                    "successful": successful,
+                    "failed": failed,
+                    "total_records": total_records,
+                    "duration_seconds": duration
+                }
+            )
+
+            return {
+                "success": True,
+                "successful": successful,
+                "failed": failed,
+                "total_records": total_records,
+                "duration_seconds": duration
+            }
+
+        except Exception as e:
+            logger.error(f"Historical data fetch error: {str(e)}")
+            db.rollback()
+            await activity_logger.log_activity(
+                activity_type="error",
+                message=f"Historical data fetch failed: {str(e)}"
+            )
+            return {
+                "success": False,
+                "error": str(e)
+            }
+        finally:
+            db.close()
+
     async def update_daily_prices(self):
         """
         Daily task: Update prices for all top 100 stocks
@@ -225,8 +348,8 @@ class PredictionEngine:
                     # Generate predictions with top 2 algorithms
                     # For now, we'll use simple prediction logic
                     # In production, this would use trained models
-                    pred_1 = await self._predict_with_algorithm(stock.symbol, "LightGBM", monday_price)
-                    pred_2 = await self._predict_with_algorithm(stock.symbol, "XGBoost", monday_price)
+                    pred_1 = await self._predict_with_algorithm(stock.symbol, "LightGBM", monday_price, db)
+                    pred_2 = await self._predict_with_algorithm(stock.symbol, "XGBoost", monday_price, db)
 
                     if pred_1 is None or pred_2 is None:
                         failed += 1
@@ -382,27 +505,47 @@ class PredictionEngine:
         finally:
             db.close()
 
-    async def _predict_with_algorithm(self, symbol: str, algorithm: str, current_price: float) -> Optional[float]:
+    async def _predict_with_algorithm(self, symbol: str, algorithm: str, current_price: float, db: Session) -> Optional[float]:
         """
         Predict Friday price using specified algorithm
 
-        For MVP: Uses simple technical analysis
+        For MVP: Uses simple technical analysis based on stored historical data
         In production: Would use trained ML models
         """
         try:
-            # Fetch historical data (5 years)
-            symbol_with_jk = f"{symbol}.JK"
-            data = await self.data_fetcher.fetch_stock_data(
-                symbol_with_jk,
-                period="1825d",  # 5 years
-                interval="1d"
-            )
+            # Get historical data from database (last 60 days minimum)
+            historical_prices = db.query(StockPrice).filter(
+                StockPrice.symbol == symbol
+            ).order_by(StockPrice.date.desc()).limit(100).all()
 
-            if data is None or data.empty or len(data) < 60:
-                return None
+            if len(historical_prices) < 20:
+                logger.warning(f"Not enough historical data for {symbol} ({len(historical_prices)} records)")
+                # Fall back to fetching from Yahoo Finance
+                symbol_with_jk = f"{symbol}.JK"
+                data = await self.data_fetcher.fetch_stock_data(
+                    symbol_with_jk,
+                    period="90d",
+                    interval="1d"
+                )
+
+                if data is None or data.empty or len(data) < 20:
+                    return None
+
+                # Calculate features from fetched data
+                df = data.copy()
+            else:
+                # Use stored historical data
+                df = pd.DataFrame([
+                    {
+                        'Date': p.date,
+                        'Close': p.price,
+                        'Volume': p.volume
+                    }
+                    for p in reversed(historical_prices)
+                ])
+                df.set_index('Date', inplace=True)
 
             # Calculate features
-            df = data.copy()
             df['Returns'] = df['Close'].pct_change()
             df['MA5'] = df['Close'].rolling(window=5).mean()
             df['MA20'] = df['Close'].rolling(window=20).mean()
@@ -410,6 +553,11 @@ class PredictionEngine:
 
             # Simple prediction: current price + (average 5-day return * 5)
             avg_5day_return = df['Returns'].tail(5).mean()
+
+            # Check for NaN
+            if pd.isna(avg_5day_return):
+                logger.warning(f"Cannot calculate avg return for {symbol}")
+                return None
 
             # Add some variation between algorithms
             if algorithm == "LightGBM":

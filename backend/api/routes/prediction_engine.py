@@ -98,6 +98,44 @@ async def initialize_prediction_engine():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/trigger/fetch-history")
+async def trigger_fetch_historical_data(days: int = 365):
+    """
+    Fetch historical price data for all top 100 stocks
+
+    This should be run BEFORE generating predictions to ensure
+    the database has enough historical data.
+
+    Args:
+        days: Number of days of historical data to fetch (default: 365)
+
+    Returns:
+        Status of the operation with details on records fetched
+    """
+    try:
+        logger.info(f"Manual trigger: Fetch historical data ({days} days)")
+
+        await activity_logger.log_activity(
+            activity_type="system",
+            message=f"Historical data fetch manually triggered ({days} days)"
+        )
+
+        # Run the fetch (this will take a while)
+        import asyncio
+        asyncio.create_task(prediction_engine.fetch_historical_data(days=days))
+
+        return {
+            "success": True,
+            "message": f"Historical data fetch started for {days} days",
+            "warning": "This process may take 10-15 minutes for 100 stocks",
+            "note": "Check activity logs for progress. You can generate predictions after this completes."
+        }
+
+    except Exception as e:
+        logger.error(f"Error triggering historical data fetch: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/trigger/price-update")
 async def trigger_price_update():
     """
