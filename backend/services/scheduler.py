@@ -13,6 +13,7 @@ from services.ensemble_predictor import EnsemblePredictor
 from services.portfolio_manager import portfolio_manager
 from services.activity_logger import activity_logger
 from services.stock_data_fetcher import StockDataFetcher
+from services.prediction_engine import prediction_engine
 from config import settings
 
 
@@ -57,10 +58,42 @@ class SchedulerService:
             replace_existing=True
         )
 
+        # PREDICTION ENGINE JOBS
+
+        # Daily price update: 8 AM WIB - Update prices for top 100 stocks
+        self.scheduler.add_job(
+            prediction_engine.update_daily_prices,
+            trigger=CronTrigger(hour=8, minute=0, timezone=self.timezone),
+            id='daily_price_update',
+            name='Daily Price Update for Top 100 Stocks (8 AM WIB)',
+            replace_existing=True
+        )
+
+        # Monday prediction generation: 9 AM WIB - Generate weekly predictions
+        self.scheduler.add_job(
+            prediction_engine.generate_monday_predictions,
+            trigger=CronTrigger(day_of_week='mon', hour=9, minute=0, timezone=self.timezone),
+            id='monday_predictions',
+            name='Monday Prediction Generation (9 AM WIB)',
+            replace_existing=True
+        )
+
+        # Daily actual price update: 5 PM WIB - Update actual vs predicted
+        self.scheduler.add_job(
+            prediction_engine.update_actual_prices,
+            trigger=CronTrigger(hour=17, minute=0, timezone=self.timezone),
+            id='actual_price_update',
+            name='Daily Actual Price Update (5 PM WIB)',
+            replace_existing=True
+        )
+
         self.scheduler.start()
         logger.info("Scheduler started successfully")
         logger.info("Daily predictions scheduled: Every day at 6:00 AM WIB")
         logger.info("Weekly retraining scheduled: Every Sunday at 2:00 AM WIB")
+        logger.info("Prediction Engine - Daily price update: Every day at 8:00 AM WIB")
+        logger.info("Prediction Engine - Monday predictions: Every Monday at 9:00 AM WIB")
+        logger.info("Prediction Engine - Actual price update: Every day at 5:00 PM WIB")
 
         # Log initial startup
         await activity_logger.log_activity(

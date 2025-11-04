@@ -9,8 +9,10 @@ from loguru import logger
 import sys
 
 from config import settings
-from api.routes import stock, prediction, settings as settings_routes, portfolio, activity, scheduler
+from api.routes import stock, prediction, settings as settings_routes, portfolio, activity, scheduler, prediction_engine
 from services.scheduler import scheduler_service
+from database.models import init_db
+from services.prediction_engine import prediction_engine as pred_engine
 
 # Configure logging
 logger.remove()
@@ -44,6 +46,14 @@ async def lifespan(app: FastAPI):
     os.makedirs("activity_logs", exist_ok=True)
 
     logger.info("Directories created successfully")
+
+    # Initialize database
+    logger.info("Initializing database...")
+    init_db()
+
+    # Initialize prediction engine
+    logger.info("Initializing prediction engine...")
+    await pred_engine.initialize_top_100_stocks()
 
     # Start background scheduler
     logger.info("Starting background scheduler...")
@@ -104,6 +114,7 @@ app.include_router(settings_routes.router, prefix="/api/settings", tags=["Settin
 app.include_router(portfolio.router, tags=["Portfolio"])
 app.include_router(activity.router, tags=["Activity"])
 app.include_router(scheduler.router, tags=["Scheduler"])
+app.include_router(prediction_engine.router, tags=["Prediction Engine"])
 
 
 # Global exception handler
