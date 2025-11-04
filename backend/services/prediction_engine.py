@@ -104,10 +104,9 @@ class PredictionEngine:
             for stock in stocks:
                 try:
                     # Fetch historical data
-                    symbol_with_jk = f"{stock.symbol}.JK"
-                    data = await self.data_fetcher.fetch_stock_data(
-                        symbol_with_jk,
-                        period=f"{days}d",
+                    data = await self.data_fetcher.get_stock_history(
+                        stock.symbol,
+                        days=days,
                         interval="1d"
                     )
 
@@ -224,10 +223,9 @@ class PredictionEngine:
             for stock in stocks:
                 try:
                     # Fetch current price
-                    symbol_with_jk = f"{stock.symbol}.JK"
-                    data = await self.data_fetcher.fetch_stock_data(
-                        symbol_with_jk,
-                        period="1d",
+                    data = await self.data_fetcher.get_stock_history(
+                        stock.symbol,
+                        days=1,
                         interval="1d"
                     )
 
@@ -338,10 +336,9 @@ class PredictionEngine:
                     # If no price data, try to fetch current price
                     if not latest_price_record:
                         logger.warning(f"No price data for {stock.symbol}, fetching current price...")
-                        symbol_with_jk = f"{stock.symbol}.JK"
-                        data = await self.data_fetcher.fetch_stock_data(
-                            symbol_with_jk,
-                            period="1d",
+                        data = await self.data_fetcher.get_stock_history(
+                            stock.symbol,
+                            days=1,
                             interval="1d"
                         )
 
@@ -542,10 +539,9 @@ class PredictionEngine:
             if len(historical_prices) < 20:
                 logger.warning(f"Not enough historical data for {symbol} ({len(historical_prices)} records)")
                 # Fall back to fetching from Yahoo Finance
-                symbol_with_jk = f"{symbol}.JK"
-                data = await self.data_fetcher.fetch_stock_data(
-                    symbol_with_jk,
-                    period="90d",
+                data = await self.data_fetcher.get_stock_history(
+                    symbol,
+                    days=90,
                     interval="1d"
                 )
 
