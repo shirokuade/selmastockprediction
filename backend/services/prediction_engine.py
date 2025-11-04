@@ -330,28 +330,48 @@ class PredictionEngine:
 
             for stock in stocks:
                 try:
-                    # Get Monday price (current price)
-                    monday_price_record = db.query(StockPrice).filter(
-                        and_(
-                            StockPrice.symbol == stock.symbol,
-                            StockPrice.date >= datetime.combine(monday, datetime.min.time())
-                        )
+                    # Get latest price for this stock (not necessarily Monday)
+                    latest_price_record = db.query(StockPrice).filter(
+                        StockPrice.symbol == stock.symbol
                     ).order_by(StockPrice.date.desc()).first()
 
-                    if not monday_price_record:
-                        logger.warning(f"No Monday price for {stock.symbol}, skipping")
-                        failed += 1
-                        continue
+                    # If no price data, try to fetch current price
+                    if not latest_price_record:
+                        logger.warning(f"No price data for {stock.symbol}, fetching current price...")
+                        symbol_with_jk = f"{stock.symbol}.JK"
+                        data = await self.data_fetcher.fetch_stock_data(
+                            symbol_with_jk,
+                            period="1d",
+                            interval="1d"
+                        )
 
-                    monday_price = monday_price_record.price
+                        if data is not None and not data.empty:
+                            monday_price = float(data['Close'].iloc[-1])
+                            # Store it
+                            price_record = StockPrice(
+                                symbol=stock.symbol,
+                                name=stock.name,
+                                date=datetime.now(),
+                                price=monday_price,
+                                volume=int(data['Volume'].iloc[-1]) if 'Volume' in data.columns else 0
+                            )
+                            db.add(price_record)
+                            db.commit()
+                            logger.info(f"Fetched current price for {stock.symbol}: ${monday_price:.2f}")
+                        else:
+                            logger.error(f"✗ {stock.symbol}: Cannot fetch price data")
+                            failed += 1
+                            continue
+                    else:
+                        monday_price = latest_price_record.price
 
                     # Generate predictions with top 2 algorithms
-                    # For now, we'll use simple prediction logic
-                    # In production, this would use trained models
+                    logger.info(f"Generating predictions for {stock.symbol} (current: ${monday_price:.2f})...")
                     pred_1 = await self._predict_with_algorithm(stock.symbol, "LightGBM", monday_price, db)
                     pred_2 = await self._predict_with_algorithm(stock.symbol, "XGBoost", monday_price, db)
 
                     if pred_1 is None or pred_2 is None:
+                        logger.error(f"✗ {stock.symbol}: Prediction algorithms returned None")
                         failed += 1
                         continue
 
@@ -359,50 +379,51 @@ class PredictionEngine:
                     avg_pred = (pred_1 + pred_2) / 2
                     predicted_gain = ((avg_pred - monday_price) / monday_price) * 100
 
-                    # Only store if predicted gain >= 2.5%
-                    if predicted_gain >= 2.5:
-                        # Check if prediction already exists for this week
-                        existing = db.query(WeeklyPrediction).filter(
-                            and_(
-                                WeeklyPrediction.symbol == stock.symbol,
-                                WeeklyPrediction.week_start == datetime.combine(monday, datetime.min.time())
-                            )
-                        ).first()
+                    # Store ALL predictions (removed 2.5% filter)
+                    # Check if prediction already exists for this week
+                    existing = db.query(WeeklyPrediction).filter(
+                        and_(
+                            WeeklyPrediction.symbol == stock.symbol,
+                            WeeklyPrediction.week_start == datetime.combine(monday, datetime.min.time())
+                        )
+                    ).first()
 
-                        if existing:
-                            # Update existing
-                            existing.monday_price = monday_price
-                            existing.prediction_1 = pred_1
-                            existing.prediction_2 = pred_2
-                            existing.avg_prediction = avg_pred
-                            existing.predicted_gain_percent = predicted_gain
-                            existing.updated_at = datetime.now()
-                        else:
-                            # Insert new
-                            prediction = WeeklyPrediction(
-                                symbol=stock.symbol,
-                                week_start=datetime.combine(monday, datetime.min.time()),
-                                monday_price=monday_price,
-                                algorithm_1="LightGBM",
-                                prediction_1=pred_1,
-                                algorithm_2="XGBoost",
-                                prediction_2=pred_2,
-                                avg_prediction=avg_pred,
-                                predicted_gain_percent=predicted_gain,
-                                is_active=True
-                            )
-                            db.add(prediction)
-
-                        predictions_above_threshold += 1
-                        successful += 1
-                        logger.info(f"✓ {stock.symbol}: ${monday_price:.2f} → ${avg_pred:.2f} (+{predicted_gain:.2f}%)")
+                    if existing:
+                        # Update existing
+                        existing.monday_price = monday_price
+                        existing.prediction_1 = pred_1
+                        existing.prediction_2 = pred_2
+                        existing.avg_prediction = avg_pred
+                        existing.predicted_gain_percent = predicted_gain
+                        existing.updated_at = datetime.now()
                     else:
-                        successful += 1
-                        logger.info(f"○ {stock.symbol}: Gain below threshold ({predicted_gain:.2f}%)")
+                        # Insert new
+                        prediction = WeeklyPrediction(
+                            symbol=stock.symbol,
+                            week_start=datetime.combine(monday, datetime.min.time()),
+                            monday_price=monday_price,
+                            algorithm_1="LightGBM",
+                            prediction_1=pred_1,
+                            algorithm_2="XGBoost",
+                            prediction_2=pred_2,
+                            avg_prediction=avg_pred,
+                            predicted_gain_percent=predicted_gain,
+                            is_active=True
+                        )
+                        db.add(prediction)
+
+                    if predicted_gain >= 2.5:
+                        predictions_above_threshold += 1
+
+                    successful += 1
+                    gain_indicator = "📈" if predicted_gain >= 2.5 else "📊"
+                    logger.info(f"✓ {gain_indicator} {stock.symbol}: ${monday_price:.2f} → ${avg_pred:.2f} ({predicted_gain:+.2f}%)")
 
                 except Exception as e:
                     failed += 1
                     logger.error(f"✗ {stock.symbol}: {str(e)}")
+                    import traceback
+                    logger.error(traceback.format_exc())
 
                 await asyncio.sleep(1)  # Rate limiting
 

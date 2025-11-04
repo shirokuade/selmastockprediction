@@ -262,7 +262,7 @@ export default function PredictionEnginePage() {
           <h3 className="text-sm font-semibold text-blue-900 mb-1">Trading Strategy</h3>
           <p className="text-sm text-blue-700">
             Buy on <strong>Monday</strong> at opening price. Sell on <strong>Friday</strong> at closing price.
-            Only stocks with predicted gain ≥ 2.5% are shown.
+            All predictions are shown - look for high gain % for best opportunities.
           </p>
         </div>
 
@@ -335,7 +335,13 @@ export default function PredictionEnginePage() {
                       <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
                         {formatCurrency(pred.avg_prediction)}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
+                      <td className={`px-4 py-4 whitespace-nowrap text-sm font-semibold ${
+                        pred.predicted_gain_percent >= 2.5
+                          ? 'text-green-600'
+                          : pred.predicted_gain_percent >= 0
+                            ? 'text-blue-600'
+                            : 'text-red-600'
+                      }`}>
                         {formatPercent(pred.predicted_gain_percent)}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -391,9 +397,10 @@ export default function PredictionEnginePage() {
           <div className="p-6 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200">
             <h3 className="font-semibold text-purple-900 mb-2">💰 Trading Rules</h3>
             <ul className="text-sm text-purple-800 space-y-1">
-              <li>• Min gain threshold: 2.5%</li>
+              <li>• All predictions shown (sorted by gain %)</li>
               <li>• Buy Monday open, sell Friday close</li>
               <li>• 100 stocks analyzed weekly</li>
+              <li>• Focus on higher gain % for best returns</li>
             </ul>
           </div>
         </div>

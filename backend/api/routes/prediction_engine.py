@@ -15,14 +15,14 @@ router = APIRouter(prefix="/api/prediction-engine", tags=["prediction_engine"])
 
 @router.get("/predictions/active")
 async def get_active_predictions(
-    min_gain: float = 2.5,
+    min_gain: float = 0.0,
     db: Session = Depends(get_db)
 ):
     """
     Get all active predictions for current week
 
     Returns predictions sorted by highest gain potential
-    Only shows stocks with predicted gain >= min_gain %
+    Shows all predictions by default (min_gain=0)
     """
     try:
         predictions = prediction_engine.get_active_predictions(db, min_gain=min_gain)
@@ -250,7 +250,7 @@ async def get_prediction_stats(db: Session = Depends(get_db)):
         avg_actual_gain = sum(actual_gains) / len(actual_gains) if actual_gains else 0
 
         # Get active predictions count
-        active = prediction_engine.get_active_predictions(db, min_gain=2.5)
+        active = prediction_engine.get_active_predictions(db, min_gain=0.0)
 
         return {
             "active_predictions": len(active),
@@ -258,8 +258,7 @@ async def get_prediction_stats(db: Session = Depends(get_db)):
             "correct_predictions": correct_predictions,
             "accuracy_percent": accuracy,
             "average_predicted_gain": avg_predicted_gain,
-            "average_actual_gain": avg_actual_gain,
-            "min_gain_threshold": 2.5
+            "average_actual_gain": avg_actual_gain
         }
 
     except Exception as e:
