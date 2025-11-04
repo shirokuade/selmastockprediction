@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { RefreshCw, TrendingUp, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { RefreshCw, TrendingUp, CheckCircle, XCircle, AlertTriangle, Zap } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/$/, '');
@@ -12,6 +12,8 @@ export default function PredictionEnginePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'active' | 'historical'>('active');
+  const [predicting, setPredicting] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -21,6 +23,7 @@ export default function PredictionEnginePage() {
     try {
       setLoading(true);
       setError(null);
+      setSuccess(null);
 
       const endpoint = activeTab === 'active'
         ? `${API_URL}/api/prediction-engine/predictions/active`
@@ -37,6 +40,27 @@ export default function PredictionEnginePage() {
       setError(err.response?.data?.detail || err.message || 'Failed to load predictions');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const triggerPredictions = async () => {
+    try {
+      setPredicting(true);
+      setError(null);
+      setSuccess(null);
+
+      const response = await axios.post(`${API_URL}/api/prediction-engine/trigger/monday-predictions`);
+
+      setSuccess(response.data.message || 'Predictions generated successfully! Refreshing data...');
+
+      // Wait a moment then reload data
+      setTimeout(() => {
+        loadData();
+      }, 2000);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || err.message || 'Failed to generate predictions');
+    } finally {
+      setPredicting(false);
     }
   };
 
@@ -90,20 +114,50 @@ export default function PredictionEnginePage() {
               Weekly trading signals for top 100 Indonesian stocks
             </p>
           </div>
-          <button
-            onClick={loadData}
-            disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={loadData}
+              disabled={loading || predicting}
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+            <button
+              onClick={triggerPredictions}
+              disabled={loading || predicting}
+              className="px-6 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-colors flex items-center gap-2 font-semibold disabled:opacity-50 shadow-lg"
+            >
+              <Zap className={`h-5 w-5 ${predicting ? 'animate-pulse' : ''}`} />
+              {predicting ? 'Generating...' : 'Predict!'}
+            </button>
+          </div>
         </div>
+
+        {/* Success Message */}
+        {success && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
+            {success}
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
             {error}
+          </div>
+        )}
+
+        {/* Predicting Status */}
+        {predicting && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              <div>
+                <p className="text-blue-900 font-semibold">Generating predictions...</p>
+                <p className="text-blue-700 text-sm">This will take 5-10 minutes for 100 stocks. Please wait.</p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -182,7 +236,7 @@ export default function PredictionEnginePage() {
               <p className="text-lg font-medium">No predictions available</p>
               <p className="text-sm mt-2">
                 {activeTab === 'active'
-                  ? 'Wait for Monday 9 AM WIB for next predictions, or trigger manually from Settings.'
+                  ? 'Wait for Monday 9 AM WIB for next predictions, or click "Predict!" button above to generate now.'
                   : 'No historical data yet. Predictions will appear here after first week completes.'}
               </p>
             </div>
