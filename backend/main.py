@@ -9,7 +9,7 @@ from loguru import logger
 import sys
 
 from config import settings
-from api.routes import stock, prediction, settings as settings_routes, portfolio, activity, scheduler, prediction_engine
+from api.routes import stock, prediction, settings as settings_routes, portfolio, activity, scheduler, prediction_engine, beta
 from services.scheduler import scheduler_service
 from database.models import init_db
 from services.prediction_engine import prediction_engine as pred_engine
@@ -115,6 +115,7 @@ app.include_router(portfolio.router, tags=["Portfolio"])
 app.include_router(activity.router, tags=["Activity"])
 app.include_router(scheduler.router, tags=["Scheduler"])
 app.include_router(prediction_engine.router, tags=["Prediction Engine"])
+app.include_router(beta.router, tags=["Beta AI Engine"])
 
 
 # Global exception handler
